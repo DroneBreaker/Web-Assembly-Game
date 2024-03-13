@@ -2,6 +2,7 @@
 
 mod utils;
 
+use std::fmt;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -58,7 +59,7 @@ impl Universe {
                 let cell = self.cells[index];
                 let live_neighbors = self.live_neighbor_count(row, col);
 
-                let next_cell =  match  (cell, live_neighbor) {
+                let next_cell = match (cell, live_neighbors) {
                     // Rule 1: Any live cell with fewer than two live neighbors
                     // dies bc of underpopulation
                     (Cell::Alive, x) if x < 2 => Cell::Dead,
@@ -68,12 +69,60 @@ impl Universe {
 
                     // Rule 3: Any live cell with more than three live neighbors dies bc
                     // of overpopulation
-                    (Cell::Alive, x) if x > 3 => Cell::Dead
+                    (Cell::Alive, x) if x > 3 => Cell::Dead,
 
                     // Rule 4: Any dead cell with exactly three live neigbors becomes a live
                     // cell due to overpopulation
+                    (Cell::Dead, 3) => Cell::Alive,
+
+                    // Otherwise cell remains in the same stat
+                    (otherwise, _) => otherwise,
                 };
+
+                next[index] = next_cell;
             }
         }
+
+        self.cells = next;
+    }
+
+    pub fn new() -> Universe {
+        let width = 64;
+        let height = 64;
+
+        let cells = (0..height * width)
+            .map(|i| {
+                if i % 2 == 0 || i % 7 == 0 {
+                    Cell::Alive
+                } else {
+                    Cell::Dead
+                }
+            })
+            .collect();
+
+        Universe {
+            width,
+            height,
+            cells,
+        }
+    }
+
+    pub fn render(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl fmt::Display for Universe {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for line in self.cells.as_slice().chunks(self.width as usize) {
+            for &cell in line {
+                let symbol = if cell == Cell::Dead { 'D' } else { 'A' };
+                write!(f, "{}", symbol)?;
+            }
+
+            write!(f, "\n");
+        }
+
+        Ok(())
     }
 }
